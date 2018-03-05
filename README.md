@@ -1,1 +1,1 @@
-# cropper
+# cropper is a javascript based cropper for cropping images with fixed aspect ratio. The code is extensively explained by the means of comments following all the functions used in the program.
