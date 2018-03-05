@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Javascript Crop Test</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body onload="imageCropper.setup();">
+
+<div class="alert alert-success">
+  <strong>Shubham Tripathi</strong> Demo for cropper 
+</div>
+<div class="table">
+  <div class="tableRow">
+    <div class="tableCell box">
+      <canvas id="panel" width="400" height="400"></canvas>
+    </div>
+    <div class="tableCell box">
+      <img id="crop_result" />
+    </div>
+  </div>
+
+  <div class="tableRow">
+    <div class="tableCell">
+      Zoom it:
+      <input id='scaleSlider' type='range' min='1' max='3.0' step='0.01' value='1.0' />
+
+    </div>
+    <div class="tableCell">
+      <button id="cropImgButtn" class="btn btn-success">Crop It</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+
+<script type="text/javascript">
+var imageCropper = {
+
+  ctx: document.getElementById("panel").getContext("2d"),
+
+  image: new Image(),
+
+  scale: 1,
+
+  click: false,
+
+  baseX: 0,
+
+  baseY: 0,
+
+  lastPointX: 0,
+
+  lastPointY: 0,
+
+  cutoutWidth: 40,
+
+  windowWidth: 300,
+
+  setup: function() {
+    this.image.setAttribute('crossOrigin', 'anonymous');
+    this.image.src = 'http://2.bp.blogspot.com/-WmfYRHLc8LY/UrcresujFOI/AAAAAAAAAEs/fl6v2Iq_CBM/s640/world-most-beautiful-natural-scene-wallpapers-and-images-2012-2013.jpg';
+    this.image.onload = this.generateImage.bind(this);
+    document.getElementById("cropImgButtn").onclick = this.showCropedImage.bind(this);
+    document.getElementById("scaleSlider").oninput = this.updateScale.bind(this);
+  },
+
+  /* We can also avoid using bind by simply using () for methods 
+   * There are only three events which decide the image position on canvas
+      They are as follows:
+      1. mouseup 2.mousedown 3.mousemove
+   */
+  generateImage: function() {
+    this.drawimageoncanvas(0, 0);
+    this.ctx.canvas.onmousedown = this.onMouseDown.bind(this);
+    this.ctx.canvas.onmousemove = this.onMouseMove.bind(this);
+    this.ctx.canvas.onmouseup = this.onMouseUp.bind(this);
+  },
+
+  /**
+   baseX is the X co-ordinate on the canvas from where the image will be drawn and baseY is the Y co-ordinate
+   'x' and 'y' here is the screen co-ordinates and not the canvas co-ordinates , lastpointX and lastpointY are points from where the mouse event is changed(from mouse up 
+   to mouse down) This function only draws the image on the canvas
+   */
+  drawimageoncanvas: function(x, y) {
+    var w = this.ctx.canvas.width,
+      h = this.ctx.canvas.height;
+    this.ctx.clearRect(0, 0, w, h);
+    this.baseX = this.baseX + (x - this.lastPointX);
+    this.baseY = this.baseY + (y - this.lastPointY);
+    this.lastPointX = x;
+    this.lastPointY = y;
+    this.ctx.drawImage(this.image, this.baseX, this.baseY, Math.floor(this.image.width * this.scale), Math.floor(this.image.height * this.scale));
+    this.drawCutout();
+  },
+
+  /**
+   * This shows the aspect ratio for cropping the image , this highlights the selected part and blurs the rest.
+   * 
+   */
+  drawCutout: function() {
+    this.ctx.fillStyle = 'rgba(128, 128, 128, 0.7)';
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    //Draw anti clockwise rectangle, for cutout.
+    this.ctx.moveTo(this.cutoutWidth, this.cutoutWidth);
+    this.ctx.lineTo(this.cutoutWidth, this.windowWidth + this.cutoutWidth);
+    this.ctx.lineTo(this.cutoutWidth + this.windowWidth, this.cutoutWidth + this.windowWidth);
+    this.ctx.lineTo(this.cutoutWidth + this.windowWidth, this.cutoutWidth);
+    this.ctx.closePath();
+    this.ctx.fill();
+  },
+
+  /**
+   * make the click variable true on mouse click so that the 'onmousemove' function can be called 
+   */
+  onMouseDown: function(e) {
+    e.preventDefault();
+    var loc = this.windowToCanvas(e.clientX, e.clientY);
+    this.click = true;
+    this.lastPointX = loc.x;
+    this.lastPointY = loc.y;
+  },
+
+  /**
+   *Move the drawn image on the canvas with the movement of the mouse 
+   */
+  onMouseMove: function(e) {
+    e.preventDefault();
+    if (this.click) {
+      var loc = this.windowToCanvas(e.clientX, e.clientY);
+      this.drawimageoncanvas(loc.x, loc.y);
+    }
+  },
+
+  /**
+   * make the click false on any subsequent click after the onmousemove event 
+   */
+  onMouseUp: function(e) {
+    e.preventDefault();
+    this.click = false;
+  },
+
+  /**
+   * Translate to HTML coardinates to Canvas coardinates.
+   */
+  windowToCanvas: function(x, y) {
+    var canvas = this.ctx.canvas;
+    var bbox = canvas.getBoundingClientRect();
+    return {
+      x: x - bbox.left * (canvas.width / bbox.width),
+      y: y - bbox.top * (canvas.height / bbox.height)
+    };
+  },
+
+  /**
+   * Get the canvas beside the image , draw the cutout of the image on that
+   * 
+   */
+  showCropedImage: function() {
+    var temp_ctx, temp_canvas;
+    temp_canvas = document.createElement('canvas');
+    temp_ctx = temp_canvas.getContext('2d');
+    temp_canvas.width = this.windowWidth;
+    temp_canvas.height = this.windowWidth;
+    temp_ctx.drawImage(this.ctx.canvas, this.cutoutWidth, this.cutoutWidth, this.windowWidth, this.windowWidth, 0, 0, this.windowWidth, this.windowWidth);
+    var vData = temp_canvas.toDataURL();
+    document.getElementById('crop_result').src = vData;
+  },
+  /**
+   * zoom the image with the slider provided on the interface to find the right crop for the image
+   * 
+   * 
+   */
+  updateScale: function(e) {
+    this.scale = e.target.value;
+    this.drawimageoncanvas(this.lastPointX, this.lastPointY);
+  }
+};
+
+/**
+ * Trigger the app.
+ */
+
+
+</script>
+
